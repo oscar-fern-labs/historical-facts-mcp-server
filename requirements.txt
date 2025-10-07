@@ -1,0 +1,5 @@
+mcp>=1.16.0
+httpx>=0.28.0
+python-dateutil>=2.9.0
+fastapi>=0.104.0
+uvicorn>=0.24.0

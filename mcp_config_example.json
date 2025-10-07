@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "historical-facts": {
+      "command": "python",
+      "args": ["/path/to/historical-facts-mcp-server/historical_facts_server.py"],
+      "env": {}
+    }
+  }
+}
