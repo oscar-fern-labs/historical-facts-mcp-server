@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Map</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--openai-bg-primary, #f9f9f9);
+            color: var(--openai-text-primary, #333);
+            line-height: 1.6;
+        }
+        
+        .map-container {
+            max-width: 100%;
+            padding: 20px;
+            margin: 0 auto;
+        }
+        
+        .map-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border-radius: 16px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .map-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-conic-gradient(
+                from 0deg at 50% 50%,
+                rgba(255,255,255,0.1) 0deg 36deg,
+                transparent 36deg 72deg
+            );
+            animation: rotate 20s linear infinite;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .map-title {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .map-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .map-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .map-control-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.3);
+        }
+        
+        .map-control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+        }
+        
+        .map-control-btn.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .world-map {
+            background: var(--openai-bg-secondary, white);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .map-svg {
+            width: 100%;
+            height: 400px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+        }
+        
+        .location-markers {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+        
+        .location-marker {
+            background: var(--openai-bg-secondary, white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            border-left: 4px solid #11998e;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .location-marker:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        
+        .location-marker.events {
+            border-left-color: #667eea;
+        }
+        
+        .location-marker.births {
+            border-left-color: #2ecc71;
+        }
+        
+        .location-marker.deaths {
+            border-left-color: #e74c3c;
+        }
+        
+        .location-marker.holidays {
+            border-left-color: #f39c12;
+        }
+        
+        .marker-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .marker-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .marker-icon.events {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        
+        .marker-icon.births {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+        }
+        
+        .marker-icon.deaths {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .marker-icon.holidays {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+        
+        .marker-details {
+            flex: 1;
+        }
+        
+        .marker-location {
+            font-weight: bold;
+            color: #11998e;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+        
+        .marker-year {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .marker-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .marker-description {
+            color: var(--openai-text-secondary, #666);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .marker-category {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .category-events {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .category-births {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+        
+        .category-deaths {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+        
+        .category-holidays {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+        
+        .map-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+            border-radius: 12px;
+            border: 2px dashed var(--openai-border, #ccc);
+            color: var(--openai-text-secondary, #666);
+        }
+        
+        .map-placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.6;
+        }
+        
+        .map-placeholder-text {
+            font-size: 1.1rem;
+            text-align: center;
+            max-width: 300px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--openai-bg-secondary, white);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #11998e;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--openai-text-secondary, #666);
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            color: var(--openai-text-secondary, #666);
+            background: rgba(17, 153, 142, 0.05);
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .map-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .location-markers {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map-root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        function HistoricalMap() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [mapType, setMapType] = useState('world');
+            const [widgetState, setWidgetState] = useState({});
+
+            useEffect(() => {
+                if (window.openai?.toolOutput) {
+                    setData(window.openai.toolOutput);
+                    setLoading(false);
+                }
+                
+                if (window.openai?.widgetState) {
+                    setWidgetState(window.openai.widgetState);
+                    setMapType(window.openai.widgetState.mapType || 'world');
+                }
+
+                const handleToolResponse = (event) => {
+                    if (event.detail?.toolOutput) {
+                        setData(event.detail.toolOutput);
+                        setLoading(false);
+                    }
+                };
+
+                window.addEventListener('openai:tool_response', handleToolResponse);
+                return () => window.removeEventListener('openai:tool_response', handleToolResponse);
+            }, []);
+
+            const updateWidgetState = useCallback((updates) => {
+                const newState = { ...widgetState, ...updates };
+                setWidgetState(newState);
+                window.openai?.setWidgetState?.(newState);
+            }, [widgetState]);
+
+            const changeMapType = (newType) => {
+                setMapType(newType);
+                updateWidgetState({ mapType: newType });
+            };
+
+            const getLocationEvents = () => {
+                if (!data) return [];
+                
+                const locationEvents = [];
+                const categories = ['events', 'births', 'deaths', 'holidays'];
+                
+                categories.forEach(category => {
+                    if (data[category]) {
+                        data[category].forEach(event => {
+                            // Extract location information from event
+                            const location = extractLocation(event);
+                            if (location) {
+                                locationEvents.push({
+                                    ...event,
+                                    category,
+                                    location,
+                                    coordinates: getCoordinates(location) // Mock coordinates
+                                });
+                            }
+                        });
+                    }
+                });
+                
+                return locationEvents.filter(event => {
+                    if (mapType === 'world') return true;
+                    if (mapType === 'events_only') return event.category === 'events';
+                    if (mapType === 'births_deaths') return ['births', 'deaths'].includes(event.category);
+                    return true;
+                });
+            };
+
+            const extractLocation = (event) => {
+                // Extract location from event text or pages
+                if (event.primary_page?.title) {
+                    const title = event.primary_page.title;
+                    const commonLocations = ['United States', 'England', 'France', 'Germany', 'Italy', 'Spain', 'Japan', 'China', 'India', 'Russia', 'Brazil', 'Australia', 'Canada', 'Mexico'];
+                    const found = commonLocations.find(loc => title.includes(loc) || event.text?.includes(loc));
+                    return found || 'Unknown Location';
+                }
+                return 'Unknown Location';
+            };
+
+            const getCoordinates = (location) => {
+                // Mock coordinates for demo - in real app, use geocoding API
+                const locationCoords = {
+                    'United States': { lat: 39.8283, lng: -98.5795 },
+                    'England': { lat: 52.3555, lng: -1.1743 },
+                    'France': { lat: 46.2276, lng: 2.2137 },
+                    'Germany': { lat: 51.1657, lng: 10.4515 },
+                    'Italy': { lat: 41.8719, lng: 12.5674 },
+                    'Spain': { lat: 40.4637, lng: -3.7492 },
+                    'Japan': { lat: 36.2048, lng: 138.2529 },
+                    'China': { lat: 35.8617, lng: 104.1954 },
+                    'India': { lat: 20.5937, lng: 78.9629 },
+                    'Russia': { lat: 61.5240, lng: 105.3188 },
+                    'Brazil': { lat: -14.2350, lng: -51.9253 },
+                    'Australia': { lat: -25.2744, lng: 133.7751 },
+                    'Canada': { lat: 56.1304, lng: -106.3468 },
+                    'Mexico': { lat: 23.6345, lng: -102.5528 }
+                };
+                
+                return locationCoords[location] || { lat: 0, lng: 0 };
+            };
+
+            const getCategoryIcon = (category) => {
+                const icons = {
+                    events: '⚡',
+                    births: '👶',
+                    deaths: '🕊️',
+                    holidays: '🎉'
+                };
+                return icons[category] || '📍';
+            };
+
+            const locationEvents = getLocationEvents();
+            const locationStats = {
+                total: locationEvents.length,
+                events: locationEvents.filter(e => e.category === 'events').length,
+                births: locationEvents.filter(e => e.category === 'births').length,
+                deaths: locationEvents.filter(e => e.category === 'deaths').length,
+                holidays: locationEvents.filter(e => e.category === 'holidays').length
+            };
+
+            if (loading) {
+                return (
+                    <div className="map-container">
+                        <div className="loading">🗺️ Mapping historical locations...</div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="map-container">
+                        <div className="error">Error loading map: {error}</div>
+                    </div>
+                );
+            }
+
+            const metadata = data?.component_metadata || {};
+
+            return (
+                <div className="map-container">
+                    <div className="map-header">
+                        <div className="map-title">🌍 Historical World Map</div>
+                        <div className="map-subtitle">
+                            Geographic distribution of events from {metadata.date_formatted || 'history'}
+                        </div>
+                    </div>
+
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-number">{locationStats.total}</div>
+                            <div className="stat-label">Total Locations</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{locationStats.events}</div>
+                            <div className="stat-label">Events</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{locationStats.births}</div>
+                            <div className="stat-label">Births</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{locationStats.deaths}</div>
+                            <div className="stat-label">Deaths</div>
+                        </div>
+                    </div>
+
+                    <div className="map-controls">
+                        <button
+                            className={`map-control-btn ${mapType === 'world' ? 'active' : ''}`}
+                            onClick={() => changeMapType('world')}
+                        >
+                            🌍 All Events
+                        </button>
+                        <button
+                            className={`map-control-btn ${mapType === 'events_only' ? 'active' : ''}`}
+                            onClick={() => changeMapType('events_only')}
+                        >
+                            ⚡ Events Only
+                        </button>
+                        <button
+                            className={`map-control-btn ${mapType === 'births_deaths' ? 'active' : ''}`}
+                            onClick={() => changeMapType('births_deaths')}
+                        >
+                            👶 Births & Deaths
+                        </button>
+                    </div>
+
+                    <div className="world-map">
+                        <div className="map-placeholder">
+                            <div className="map-placeholder-icon">🗺️</div>
+                            <div className="map-placeholder-text">
+                                Interactive world map showing {locationEvents.length} historical locations
+                                <br />
+                                <small>(Map visualization would appear here in full implementation)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="location-markers">
+                        {locationEvents.map((event, index) => (
+                            <div
+                                key={event.id || index}
+                                className={`location-marker ${event.category}`}
+                                onClick={() => {
+                                    if (event.primary_page?.content_urls?.desktop?.page) {
+                                        window.open(event.primary_page.content_urls.desktop.page, '_blank');
+                                    }
+                                }}
+                            >
+                                <div className={`marker-category category-${event.category}`}>
+                                    {event.category}
+                                </div>
+                                
+                                <div className="marker-header">
+                                    <div className={`marker-icon ${event.category}`}>
+                                        {getCategoryIcon(event.category)}
+                                    </div>
+                                    <div className="marker-details">
+                                        <div className="marker-location">
+                                            📍 {event.location}
+                                        </div>
+                                        <div className="marker-year">
+                                            {event.year || 'Unknown Year'}
+                                        </div>
+                                        <div className="marker-title">
+                                            {event.text || event.primary_page?.title || 'Historical Event'}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {event.enhanced_description && (
+                                    <div className="marker-description">
+                                        {event.enhanced_description.summary}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {locationEvents.length === 0 && (
+                        <div className="loading">No location data available for the current filter.</div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<HistoricalMap />, document.getElementById('map-root'));
+    </script>
+</body>
+</html>

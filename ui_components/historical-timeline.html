@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Timeline</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--openai-bg-primary, #f9f9f9);
+            color: var(--openai-text-primary, #333);
+            line-height: 1.6;
+        }
+        
+        .timeline-container {
+            max-width: 100%;
+            padding: 20px;
+            margin: 0 auto;
+        }
+        
+        .timeline-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .timeline-date {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .timeline-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: var(--openai-bg-secondary, #e8e8e8);
+            color: var(--openai-text-primary, #333);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .filter-tab.active {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .timeline-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+        
+        .event-card {
+            background: var(--openai-bg-secondary, white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .event-card.events {
+            border-left-color: #667eea;
+        }
+        
+        .event-card.births {
+            border-left-color: #2ecc71;
+        }
+        
+        .event-card.deaths {
+            border-left-color: #e74c3c;
+        }
+        
+        .event-card.holidays {
+            border-left-color: #f39c12;
+        }
+        
+        .event-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .event-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            flex-shrink: 0;
+        }
+        
+        .event-details {
+            flex: 1;
+        }
+        
+        .event-year {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .event-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+        
+        .event-description {
+            color: var(--openai-text-secondary, #666);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .event-metadata {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--openai-border, #e0e0e0);
+        }
+        
+        .event-category {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .category-events {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .category-births {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+        
+        .category-deaths {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+        
+        .category-holidays {
+            background: rgba(243, 156, 18, 0.1);
+            color: #f39c12;
+        }
+        
+        .favorite-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .favorite-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .favorite-btn.favorited {
+            color: #f39c12;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--openai-text-secondary, #666);
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .timeline-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .timeline-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="timeline-root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        function HistoricalTimeline() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [activeFilter, setActiveFilter] = useState('all');
+            const [favorites, setFavorites] = useState(new Set());
+            const [widgetState, setWidgetState] = useState({});
+
+            // Initialize from window.openai
+            useEffect(() => {
+                if (window.openai?.toolOutput) {
+                    setData(window.openai.toolOutput);
+                    setLoading(false);
+                }
+                
+                if (window.openai?.widgetState) {
+                    setWidgetState(window.openai.widgetState);
+                    setFavorites(new Set(window.openai.widgetState.favorites || []));
+                }
+
+                // Listen for tool responses
+                const handleToolResponse = (event) => {
+                    if (event.detail?.toolOutput) {
+                        setData(event.detail.toolOutput);
+                        setLoading(false);
+                    }
+                };
+
+                window.addEventListener('openai:tool_response', handleToolResponse);
+                return () => window.removeEventListener('openai:tool_response', handleToolResponse);
+            }, []);
+
+            const updateWidgetState = useCallback((updates) => {
+                const newState = { ...widgetState, ...updates };
+                setWidgetState(newState);
+                window.openai?.setWidgetState?.(newState);
+            }, [widgetState]);
+
+            const toggleFavorite = (eventId) => {
+                const newFavorites = new Set(favorites);
+                if (newFavorites.has(eventId)) {
+                    newFavorites.delete(eventId);
+                } else {
+                    newFavorites.add(eventId);
+                }
+                setFavorites(newFavorites);
+                updateWidgetState({ favorites: Array.from(newFavorites) });
+            };
+
+            const getFilteredEvents = () => {
+                if (!data) return [];
+                
+                const allEvents = [];
+                const categories = ['events', 'births', 'deaths', 'holidays'];
+                
+                categories.forEach(category => {
+                    if (data[category]) {
+                        data[category].forEach(event => {
+                            if (activeFilter === 'all' || activeFilter === category) {
+                                allEvents.push({ ...event, category });
+                            }
+                        });
+                    }
+                });
+                
+                return allEvents.sort((a, b) => (b.year || 0) - (a.year || 0));
+            };
+
+            const filteredEvents = getFilteredEvents();
+
+            if (loading) {
+                return (
+                    <div className="timeline-container">
+                        <div className="loading">Loading historical timeline...</div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="timeline-container">
+                        <div className="error">Error loading timeline: {error}</div>
+                    </div>
+                );
+            }
+
+            const metadata = data?.component_metadata || {};
+
+            return (
+                <div className="timeline-container">
+                    <div className="timeline-header">
+                        <div className="timeline-date">
+                            {metadata.date_formatted || 'Historical Timeline'}
+                        </div>
+                        <div className="timeline-stats">
+                            <div className="stat-item">
+                                <div className="stat-number">{metadata.total_events || 0}</div>
+                                <div className="stat-label">Events</div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-number">{metadata.total_births || 0}</div>
+                                <div className="stat-label">Births</div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-number">{metadata.total_deaths || 0}</div>
+                                <div className="stat-label">Deaths</div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-number">{metadata.total_holidays || 0}</div>
+                                <div className="stat-label">Holidays</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="filter-tabs">
+                        {['all', 'events', 'births', 'deaths', 'holidays'].map(filter => (
+                            <button
+                                key={filter}
+                                className={`filter-tab ${activeFilter === filter ? 'active' : ''}`}
+                                onClick={() => setActiveFilter(filter)}
+                            >
+                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="timeline-grid">
+                        {filteredEvents.map((event, index) => (
+                            <div
+                                key={event.id || index}
+                                className={`event-card ${event.category}`}
+                                onClick={() => {
+                                    if (event.primary_page?.content_urls?.desktop?.page) {
+                                        window.open(event.primary_page.content_urls.desktop.page, '_blank');
+                                    }
+                                }}
+                            >
+                                <div className="event-header">
+                                    {event.primary_page?.thumbnail?.source && (
+                                        <img
+                                            className="event-image"
+                                            src={event.primary_page.thumbnail.source}
+                                            alt={event.primary_page.title || 'Historical event'}
+                                        />
+                                    )}
+                                    <div className="event-details">
+                                        <div className="event-year">{event.year || 'Unknown Year'}</div>
+                                        <div className="event-title">
+                                            {event.text || event.primary_page?.title || 'Historical Event'}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {event.enhanced_description && (
+                                    <div className="event-description">
+                                        {event.enhanced_description.summary}
+                                        {event.enhanced_description.era && (
+                                            <div style={{ marginTop: '8px', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                                {event.enhanced_description.era} • {event.enhanced_description.time_ago}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="event-metadata">
+                                    <span className={`event-category category-${event.category}`}>
+                                        {event.category}
+                                    </span>
+                                    <button
+                                        className={`favorite-btn ${favorites.has(event.id) ? 'favorited' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleFavorite(event.id);
+                                        }}
+                                    >
+                                        {favorites.has(event.id) ? '⭐' : '☆'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {filteredEvents.length === 0 && (
+                        <div className="loading">No events found for the selected filter.</div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<HistoricalTimeline />, document.getElementById('timeline-root'));
+    </script>
+</body>
+</html>
