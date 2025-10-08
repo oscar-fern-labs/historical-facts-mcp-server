@@ -285,13 +285,24 @@ async def process_mcp_request(request_data: Dict) -> Dict:
                 "result": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {
-                        "tools": {}
+                        "tools": {},
+                        "resources": {},
+                        "prompts": {}
                     },
                     "serverInfo": {
                         "name": "historical-facts-mcp",
                         "version": "1.0.0"
                     }
                 }
+            }
+            
+        elif method == "notifications/initialized":
+            # Client notifies server that initialization is complete
+            logger.info("Client initialization complete")
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {}
             }
             
         elif method == "tools/list":
@@ -363,6 +374,37 @@ async def process_mcp_request(request_data: Dict) -> Dict:
                 "id": request_id,
                 "result": {
                     "tools": tools
+                }
+            }
+            
+        elif method == "resources/list":
+            # Return empty resources list (we don't provide any resources)
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "resources": []
+                }
+            }
+            
+        elif method == "resources/read":
+            # Resources read method (not applicable for our server)
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {
+                    "code": -32601,
+                    "message": "Resources/read not supported - this server only provides tools"
+                }
+            }
+            
+        elif method == "prompts/list":
+            # Return empty prompts list (we don't provide any prompts)
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {
+                    "prompts": []
                 }
             }
             
@@ -563,7 +605,7 @@ async def main():
     config = uvicorn.Config(
         app,
         host="0.0.0.0", 
-        port=8002,  # New port to avoid conflict
+        port=8003,  # New port to avoid conflict
         log_level="info"
     )
     
