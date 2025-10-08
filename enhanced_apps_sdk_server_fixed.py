@@ -35,8 +35,21 @@ user_preferences = {
     "discovery_mode": "chronological"
 }
 
+async def fetch_single_endpoint(client: httpx.AsyncClient, endpoint: str) -> tuple[str, dict]:
+    """Fetch a single endpoint with proper error handling"""
+    try:
+        response = await client.get(endpoint)
+        response.raise_for_status()
+        data = response.json()
+        category = endpoint.split('/')[-3]  # Extract category from URL
+        return category, data.get(category, [])[:20]  # Limit to 20 items
+    except Exception as e:
+        logger.warning(f"Failed to fetch {endpoint}: {e}")
+        category = endpoint.split('/')[-3]
+        return category, []
+
 async def fetch_historical_events(month: int, day: int, event_type: str = "all") -> dict:
-    """Fetch historical events from Wikipedia API"""
+    """Fetch historical events from Wikipedia API with improved error handling"""
     
     endpoints = []
     if event_type in ("all", "events"):
@@ -50,19 +63,29 @@ async def fetch_historical_events(month: int, day: int, event_type: str = "all")
     
     all_data = {"events": [], "births": [], "deaths": [], "holidays": []}
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for endpoint in endpoints:
-            try:
-                response = await client.get(endpoint)
-                response.raise_for_status()
-                data = response.json()
-                
-                category = endpoint.split('/')[-3]  # Extract category from URL
-                if category in data:
-                    all_data[category] = data[category][:20]  # Limit to 20 items per category
+    try:
+        # Use httpx.AsyncClient with proper timeout and limits
+        limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
+        timeout = httpx.Timeout(30.0, connect=10.0)
+        
+        async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+            # Fetch all endpoints concurrently with asyncio.gather
+            tasks = [fetch_single_endpoint(client, endpoint) for endpoint in endpoints]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Process results
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.warning(f"Task failed: {result}")
+                    continue
                     
-            except Exception as e:
-                logger.warning(f"Failed to fetch {endpoint}: {e}")
+                category, data = result
+                all_data[category] = data
+                
+    except Exception as e:
+        logger.error(f"Critical error in fetch_historical_events: {e}")
+        # Return default data structure even if everything fails
+        pass
     
     # Add metadata
     all_data["component_metadata"] = {
@@ -74,7 +97,7 @@ async def fetch_historical_events(month: int, day: int, event_type: str = "all")
         "has_images": any(
             item.get("thumbnail") or item.get("originalimage") 
             for category in ["events", "births", "deaths", "holidays"]
-            for item in all_data[category]
+            for item in all_data[category] if isinstance(item, dict)
         )
     }
     
