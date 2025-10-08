@@ -567,7 +567,7 @@
                                         onClick={() => exploreRecommendation(rec)}
                                     >
                                         <div className="recommendation-title">
-                                            {rec.month:02d}/{rec.day:02d}
+                                            {rec.month.toString().padStart(2, '0')}/{rec.day.toString().padStart(2, '0')}
                                         </div>
                                         <div className="recommendation-reason">
                                             {rec.reason}
