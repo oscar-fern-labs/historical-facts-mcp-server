@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Server Test - Historical Facts Bulletproof Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .test-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            font-weight: bold;
+            color: #495057;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .test-content {
+            padding: 20px;
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .test-button:hover {
+            background: #0056b3;
+        }
+        
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .metric-label {
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Bulletproof MCP Server Verification</h1>
+        <div class="status loading" id="overall-status">
+            🔄 Starting verification tests...
+        </div>
+        
+        <div class="grid">
+            <div class="metric">
+                <div class="metric-value" id="tests-passed">0</div>
+                <div class="metric-label">Tests Passed</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="tests-failed">0</div>
+                <div class="metric-label">Tests Failed</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="error-rate">0%</div>
+                <div class="metric-label">Error Rate</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="avg-response">0ms</div>
+                <div class="metric-label">Avg Response</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">🔍 MCP Protocol Tests</div>
+            <div class="test-content">
+                <button class="test-button" onclick="testInitialize()">Test Initialize</button>
+                <button class="test-button" onclick="testNotificationsInitialized()">Test Notifications/Initialized</button>
+                <button class="test-button" onclick="testToolsList()">Test Tools List</button>
+                <button class="test-button" onclick="testResourcesList()">Test Resources List</button>
+                <button class="test-button" onclick="testPromptsList()">Test Prompts List</button>
+                <div class="result" id="protocol-results"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">🎯 Tool Call Tests (424 Error Verification)</div>
+            <div class="test-content">
+                <button class="test-button" onclick="testTimelineExplorer()">Test Timeline Explorer</button>
+                <button class="test-button" onclick="testDiscoveryExperience()">Test Discovery Experience</button>
+                <button class="test-button" onclick="testWorldMap()">Test World Map</button>
+                <button class="test-button" onclick="testAllToolsConcurrently()">Test All Tools Concurrently</button>
+                <div class="result" id="tools-results"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">🚫 Error Handling Tests</div>
+            <div class="test-content">
+                <button class="test-button" onclick="testInvalidTool()">Test Invalid Tool</button>
+                <button class="test-button" onclick="testMalformedRequest()">Test Malformed Request</button>
+                <button class="test-button" onclick="testInvalidMethod()">Test Invalid Method</button>
+                <div class="result" id="error-results"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">⚡ Performance Tests</div>
+            <div class="test-content">
+                <button class="test-button" onclick="testResponseTimes()">Test Response Times</button>
+                <button class="test-button" onclick="testConcurrentRequests()">Test Concurrent Requests</button>
+                <button class="test-button" onclick="stressTest()">Stress Test (10 requests)</button>
+                <div class="result" id="performance-results"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-header">🎨 UI Component Tests</div>
+            <div class="test-content">
+                <button class="test-button" onclick="testUIComponents()">Test UI Components</button>
+                <button class="test-button" onclick="viewTimeline()">View Timeline Component</button>
+                <button class="test-button" onclick="viewDiscovery()">View Discovery Component</button>
+                <button class="test-button" onclick="viewWorldMap()">View World Map Component</button>
+                <div class="result" id="ui-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MCP_ENDPOINT = 'https://bulletproof-mcp-server-morphvm-87kmb6bw.http.cloud.morph.so/mcp';
+        let testResults = { passed: 0, failed: 0, totalTime: 0, requests: 0 };
+
+        function updateMetrics() {
+            document.getElementById('tests-passed').textContent = testResults.passed;
+            document.getElementById('tests-failed').textContent = testResults.failed;
+            const errorRate = testResults.requests > 0 ? 
+                ((testResults.failed / testResults.requests) * 100).toFixed(1) : '0';
+            document.getElementById('error-rate').textContent = errorRate + '%';
+            const avgResponse = testResults.requests > 0 ? 
+                Math.round(testResults.totalTime / testResults.requests) : 0;
+            document.getElementById('avg-response').textContent = avgResponse + 'ms';
+            
+            if (testResults.failed === 0 && testResults.passed > 0) {
+                document.getElementById('overall-status').className = 'status success';
+                document.getElementById('overall-status').innerHTML = '✅ All tests passed - 424 error ELIMINATED!';
+            } else if (testResults.failed > 0) {
+                document.getElementById('overall-status').className = 'status error';
+                document.getElementById('overall-status').innerHTML = '❌ Some tests failed';
+            }
+        }
+
+        async function makeRequest(method, params = {}) {
+            const startTime = Date.now();
+            try {
+                const response = await fetch(MCP_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: Date.now(),
+                        method: method,
+                        params: params
+                    })
+                });
+
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                testResults.totalTime += responseTime;
+                testResults.requests++;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    testResults.failed++;
+                    return { success: false, error: result.error, responseTime };
+                } else {
+                    testResults.passed++;
+                    return { success: true, result: result.result, responseTime };
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const responseTime = endTime - startTime;
+                testResults.totalTime += responseTime;
+                testResults.requests++;
+                testResults.failed++;
+                return { success: false, error: error.message, responseTime };
+            }
+        }
+
+        function displayResult(elementId, testName, response) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const statusIcon = response.success ? '✅' : '❌';
+            const responseTime = response.responseTime ? ` (${response.responseTime}ms)` : '';
+            
+            let resultHtml = `<strong>[${timestamp}] ${statusIcon} ${testName}${responseTime}</strong>\n`;
+            
+            if (response.success) {
+                resultHtml += `Result: ${JSON.stringify(response.result, null, 2)}\n\n`;
+            } else {
+                resultHtml += `Error: ${JSON.stringify(response.error, null, 2)}\n\n`;
+            }
+            
+            element.innerHTML = `<pre>${resultHtml}</pre>` + element.innerHTML;
+            updateMetrics();
+        }
+
+        async function testInitialize() {
+            const response = await makeRequest('initialize', {
+                protocolVersion: '2024-11-05',
+                capabilities: { tools: true },
+                clientInfo: { name: 'Verification Test', version: '1.0.0' }
+            });
+            displayResult('protocol-results', 'Initialize', response);
+        }
+
+        async function testNotificationsInitialized() {
+            const response = await makeRequest('notifications/initialized');
+            displayResult('protocol-results', 'Notifications/Initialized', response);
+        }
+
+        async function testToolsList() {
+            const response = await makeRequest('tools/list');
+            displayResult('protocol-results', 'Tools List', response);
+        }
+
+        async function testResourcesList() {
+            const response = await makeRequest('resources/list');
+            displayResult('protocol-results', 'Resources List', response);
+        }
+
+        async function testPromptsList() {
+            const response = await makeRequest('prompts/list');
+            displayResult('protocol-results', 'Prompts List', response);
+        }
+
+        async function testTimelineExplorer() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_timeline_explorer',
+                arguments: { date: '2024-10-08', event_type: 'all' }
+            });
+            displayResult('tools-results', 'Timeline Explorer', response);
+        }
+
+        async function testDiscoveryExperience() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_discovery_experience',
+                arguments: { discovery_mode: 'surprise' }
+            });
+            displayResult('tools-results', 'Discovery Experience', response);
+        }
+
+        async function testWorldMap() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_world_map',
+                arguments: { region: 'global' }
+            });
+            displayResult('tools-results', 'World Map', response);
+        }
+
+        async function testAllToolsConcurrently() {
+            console.log('Starting concurrent tool test...');
+            const promises = [
+                makeRequest('tools/call', { name: 'historical_timeline_explorer', arguments: { date: '2024-10-08' } }),
+                makeRequest('tools/call', { name: 'historical_discovery_experience', arguments: { discovery_mode: 'curated' } }),
+                makeRequest('tools/call', { name: 'historical_world_map', arguments: { region: 'europe' } })
+            ];
+
+            try {
+                const results = await Promise.all(promises);
+                const allSuccess = results.every(r => r.success);
+                displayResult('tools-results', 'Concurrent Tools Test', {
+                    success: allSuccess,
+                    result: `All tools completed: ${results.map(r => r.success ? '✅' : '❌').join(' ')}`,
+                    responseTime: Math.max(...results.map(r => r.responseTime))
+                });
+            } catch (error) {
+                displayResult('tools-results', 'Concurrent Tools Test', {
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+
+        async function testInvalidTool() {
+            const response = await makeRequest('tools/call', {
+                name: 'nonexistent_tool',
+                arguments: {}
+            });
+            displayResult('error-results', 'Invalid Tool', response);
+        }
+
+        async function testMalformedRequest() {
+            try {
+                const response = await fetch(MCP_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{"invalid": json}'
+                });
+                displayResult('error-results', 'Malformed Request', {
+                    success: false,
+                    error: 'Should have failed with malformed JSON'
+                });
+            } catch (error) {
+                displayResult('error-results', 'Malformed Request', {
+                    success: true,
+                    result: 'Correctly handled malformed JSON'
+                });
+            }
+        }
+
+        async function testInvalidMethod() {
+            const response = await makeRequest('invalid/method');
+            displayResult('error-results', 'Invalid Method', response);
+        }
+
+        async function testResponseTimes() {
+            console.log('Testing response times...');
+            const times = [];
+            for (let i = 0; i < 5; i++) {
+                const response = await makeRequest('tools/list');
+                times.push(response.responseTime);
+            }
+            const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+            
+            displayResult('performance-results', 'Response Times', {
+                success: true,
+                result: `Average: ${avgTime.toFixed(0)}ms, Min: ${minTime}ms, Max: ${maxTime}ms`
+            });
+        }
+
+        async function testConcurrentRequests() {
+            console.log('Testing concurrent requests...');
+            const promises = [];
+            for (let i = 0; i < 5; i++) {
+                promises.push(makeRequest('tools/list'));
+            }
+            
+            const results = await Promise.all(promises);
+            const successCount = results.filter(r => r.success).length;
+            const avgTime = results.reduce((sum, r) => sum + r.responseTime, 0) / results.length;
+            
+            displayResult('performance-results', 'Concurrent Requests', {
+                success: successCount === 5,
+                result: `${successCount}/5 succeeded, Average time: ${avgTime.toFixed(0)}ms`
+            });
+        }
+
+        async function stressTest() {
+            console.log('Running stress test...');
+            const promises = [];
+            for (let i = 0; i < 10; i++) {
+                promises.push(makeRequest('tools/call', {
+                    name: 'historical_timeline_explorer',
+                    arguments: { date: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}` }
+                }));
+            }
+            
+            const results = await Promise.all(promises);
+            const successCount = results.filter(r => r.success).length;
+            const failureCount = results.filter(r => !r.success).length;
+            const avgTime = results.reduce((sum, r) => sum + r.responseTime, 0) / results.length;
+            
+            displayResult('performance-results', 'Stress Test', {
+                success: failureCount === 0,
+                result: `${successCount}/10 succeeded, ${failureCount} failed, Average: ${avgTime.toFixed(0)}ms`
+            });
+        }
+
+        async function testUIComponents() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_timeline_explorer',
+                arguments: { date: '2024-10-08', event_type: 'all' }
+            });
+            
+            if (response.success && response.result.content) {
+                const htmlContent = response.result.content.find(c => c.type === 'resource')?.text;
+                if (htmlContent) {
+                    displayResult('ui-results', 'UI Components', {
+                        success: true,
+                        result: `HTML component generated (${htmlContent.length} characters)`
+                    });
+                } else {
+                    displayResult('ui-results', 'UI Components', {
+                        success: false,
+                        error: 'No HTML content found in response'
+                    });
+                }
+            } else {
+                displayResult('ui-results', 'UI Components', response);
+            }
+        }
+
+        async function viewTimeline() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_timeline_explorer',
+                arguments: { date: '2024-10-08', event_type: 'all' }
+            });
+            
+            if (response.success && response.result.content) {
+                const htmlContent = response.result.content.find(c => c.type === 'resource')?.text;
+                if (htmlContent) {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(htmlContent);
+                    newWindow.document.close();
+                    displayResult('ui-results', 'View Timeline', {
+                        success: true,
+                        result: 'Timeline component opened in new window'
+                    });
+                }
+            }
+        }
+
+        async function viewDiscovery() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_discovery_experience',
+                arguments: { discovery_mode: 'surprise' }
+            });
+            
+            if (response.success && response.result.content) {
+                const htmlContent = response.result.content.find(c => c.type === 'resource')?.text;
+                if (htmlContent) {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(htmlContent);
+                    newWindow.document.close();
+                    displayResult('ui-results', 'View Discovery', {
+                        success: true,
+                        result: 'Discovery component opened in new window'
+                    });
+                }
+            }
+        }
+
+        async function viewWorldMap() {
+            const response = await makeRequest('tools/call', {
+                name: 'historical_world_map',
+                arguments: { region: 'global' }
+            });
+            
+            if (response.success && response.result.content) {
+                const htmlContent = response.result.content.find(c => c.type === 'resource')?.text;
+                if (htmlContent) {
+                    const newWindow = window.open('', '_blank');
+                    newWindow.document.write(htmlContent);
+                    newWindow.document.close();
+                    displayResult('ui-results', 'View World Map', {
+                        success: true,
+                        result: 'World Map component opened in new window'
+                    });
+                }
+            }
+        }
+
+        // Auto-run initial tests
+        window.addEventListener('load', async function() {
+            console.log('Starting automatic verification tests...');
+            await testInitialize();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testToolsList();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testTimelineExplorer();
+        });
+    </script>
+</body>
+</html>
