@@ -57,13 +57,17 @@ async def fetch_historical_events(month: int, day: int, event_type: str = "all")
         
         logger.info(f"Fetching from: {url}")
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url)
             response.raise_for_status()
             data = response.json()
             
+            logger.info(f"Fetched {len(data.get('events', []))} events from Wikipedia API")
+            
             # Enhance data with Apps SDK metadata
             enhanced_data = enhance_historical_data(data, month, day)
+            
+            logger.info(f"Enhanced data contains {len(enhanced_data.get('events', []))} events")
             return enhanced_data
             
     except Exception as e:
