@@ -340,7 +340,7 @@ async def mcp_endpoint(request: Request):
                                 "required": ["month", "day"]
                             },
                             "_meta": {
-                                "openai/outputTemplate": "ui://widget/historical-timeline.html",
+                                "openai/outputTemplate": "ui://widget/historical-timeline-simple.html",
                                 "openai/toolInvocation/invoking": "🕰️ Crafting an interactive historical timeline with rich visual components...",
                                 "openai/toolInvocation/invoked": "✨ Timeline explorer ready! Explore historical events with interactive filters and favorites.",
                                 "openai/description": "Interactive timeline showcasing Apps SDK features: state persistence, theme integration, and rich UI components."
@@ -579,6 +579,12 @@ async def mcp_endpoint(request: Request):
                             "mimeType": "text/html+skybridge"
                         },
                         {
+                            "uri": "ui://widget/historical-timeline-simple.html",
+                            "name": "Historical Timeline Simple",
+                            "description": "Simplified timeline component for better Apps SDK compatibility",
+                            "mimeType": "text/html+skybridge"
+                        },
+                        {
                             "uri": "ui://widget/historical-discovery.html", 
                             "name": "Historical Discovery Experience",
                             "description": "Discovery interface with carousels, recommendations, and interactive cards",
@@ -596,7 +602,7 @@ async def mcp_endpoint(request: Request):
             
         elif method == "resources/read":
             uri = params.get("uri")
-            if uri in ["ui://widget/historical-timeline.html", "ui://widget/historical-discovery.html", "ui://widget/historical-map.html"]:
+            if uri in ["ui://widget/historical-timeline.html", "ui://widget/historical-timeline-simple.html", "ui://widget/historical-discovery.html", "ui://widget/historical-map.html"]:
                 filename = uri.replace("ui://widget/", "")
                 filepath = f"ui_components/{filename}"
                 

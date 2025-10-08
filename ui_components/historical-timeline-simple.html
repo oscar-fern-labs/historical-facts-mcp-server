@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Timeline</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f9f9f9;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .timeline-container { max-width: 100%; margin: 0 auto; }
+        .timeline-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        .timeline-date {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .event-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .event-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .event-year {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .event-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .event-description {
+            color: #5a6c7d;
+            line-height: 1.6;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="timeline-root">
+        <div class="timeline-container">
+            <div class="timeline-header">
+                <div class="timeline-date">Historical Timeline</div>
+                <div>Loading historical events...</div>
+            </div>
+            <div class="loading">
+                <div>🕰️ Preparing your historical timeline...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple data loader that works with multiple Apps SDK patterns
+        function loadHistoricalData() {
+            // Try multiple data sources
+            let data = null;
+            
+            // Method 1: window.toolOutput
+            if (window.toolOutput) {
+                data = window.toolOutput;
+            }
+            // Method 2: window.openai.toolOutput  
+            else if (window.openai?.toolOutput) {
+                data = window.openai.toolOutput;
+            }
+            // Method 3: window.structuredData
+            else if (window.structuredData) {
+                data = window.structuredData;
+            }
+            // Method 4: Check for data in DOM
+            else {
+                const dataScript = document.querySelector('script[type="application/json"]');
+                if (dataScript) {
+                    try {
+                        data = JSON.parse(dataScript.textContent);
+                    } catch (e) {
+                        console.log('Could not parse embedded data');
+                    }
+                }
+            }
+            
+            if (data) {
+                renderTimeline(data);
+            } else {
+                // Show sample data after a delay
+                setTimeout(() => {
+                    const sampleData = {
+                        events: [
+                            {
+                                text: "Sample Historical Event",
+                                year: 2024,
+                                extract: "This is a demonstration of the historical timeline component. The actual data will be loaded from the MCP tool response."
+                            }
+                        ],
+                        component_metadata: {
+                            date_formatted: "Today"
+                        }
+                    };
+                    renderTimeline(sampleData);
+                }, 2000);
+            }
+        }
+        
+        function renderTimeline(data) {
+            const root = document.getElementById('timeline-root');
+            
+            // Extract events from data
+            let events = [];
+            if (data.events) events = events.concat(data.events);
+            if (data.births) events = events.concat(data.births.map(b => ({...b, category: 'birth'})));
+            if (data.deaths) events = events.concat(data.deaths.map(d => ({...d, category: 'death'})));
+            if (data.holidays) events = events.concat(data.holidays.map(h => ({...h, category: 'holiday'})));
+            
+            const dateFormatted = data.component_metadata?.date_formatted || 'Historical Events';
+            
+            root.innerHTML = `
+                <div class="timeline-container">
+                    <div class="timeline-header">
+                        <div class="timeline-date">${dateFormatted}</div>
+                        <div>${events.length} Historical Events</div>
+                    </div>
+                    <div class="timeline-grid">
+                        ${events.map(event => `
+                            <div class="event-card">
+                                <div class="event-year">${event.year || 'Unknown'}</div>
+                                <div class="event-title">${event.text || 'Historical Event'}</div>
+                                <div class="event-description">${event.extract || event.description || 'No description available.'}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadHistoricalData);
+        } else {
+            loadHistoricalData();
+        }
+        
+        // Also listen for delayed data loading
+        setTimeout(loadHistoricalData, 100);
+        setTimeout(loadHistoricalData, 500);
+        setTimeout(loadHistoricalData, 1000);
+    </script>
+</body>
+</html>
